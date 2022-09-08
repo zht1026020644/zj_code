@@ -64,6 +64,11 @@ def get_input(path, hospital_coefficient):
     return df_input.values
 
 def plot_curve(data):
+    '''
+    绘制损失函数
+    :param data:
+    :return:
+    '''
     fig = plt.figure()
     plt.plot(range(len(data)), data,color='blue')
     plt.legend(['values'],loc = 'upper right')

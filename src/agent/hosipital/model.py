@@ -12,6 +12,9 @@ import random
 
 
 class Model(nn.Module):
+    '''
+    model for hospital
+    '''
     def __init__(self, name, coefficient, path):
         super(Model, self).__init__()
         self.hospital = Hospital(name, coefficient, path)
@@ -22,9 +25,25 @@ class Model(nn.Module):
         self.fc3 = nn.Linear(512, 10000)
 
     def get_data(self):
+        '''
+        get input data
+        :return: data :ndarray 100*3784
+        '''
         return utils.get_input(self.hospital.path, self.hospital.coefficient)
 
     def forward(self, x):
+        '''
+        network
+        三层：
+        第一层：
+        3784 * 512
+        第二层：
+        512 *512
+        第三层
+        512*10000  （目前是随机产生10000随机决策）
+        :param x:
+        :return:
+        '''
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         x = self.fc3(x)
@@ -32,9 +51,10 @@ class Model(nn.Module):
 
 
 model = Model("市二", 0.75, 'D:\work_software\zj_code\input_data.csv')
+# 优化函数
 optimizer = optim.Adam(model.parameters(), lr=0.01)
 
-epochs = 1
+epochs = 10
 train_loader = model.get_data()
 train_loss=[]
 for epoch in range(epochs):
@@ -52,11 +72,15 @@ for epoch in range(epochs):
                y[i][j] = 1
 
         # loss = F.cross_entropy(out,y)
+        # 计算损失函数
         loss = F.mse_loss(out,y)
+        # 梯度清零
         optimizer.zero_grad()
+        # 计算梯度
         loss.backward()
+        # 更新梯度
         optimizer.step()
-
+        # 存储loss
         train_loss.append(loss.item())
 utils.plot_curve(train_loss)
 print(train_loss)
