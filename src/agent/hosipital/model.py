@@ -73,7 +73,8 @@ for epoch in range(epochs):
 
         # loss = F.cross_entropy(out,y)
         # 计算损失函数
-        loss = F.mse_loss(out,y)
+        # loss = F.mse_loss(out,y)
+        loss = F.multilabel_soft_margin_loss(out,y)
         # 梯度清零
         optimizer.zero_grad()
         # 计算梯度
