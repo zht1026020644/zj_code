@@ -2,13 +2,11 @@ import numpy as np
 import pandas as pd
 import gym
 
-from keras.models import Sequential
-from keras.layers import Dense, Activation, Flatten
-from keras.optimizers import Adam
+from stable_baselines3 import DQN
+from stable_baselines3.common.evaluation import evaluate_policy
+import os
+os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
-from rl.agents.dqn import DQNAgent
-from rl.policy import BoltzmannQPolicy
-from rl.memory import SequentialMemory
 
 class MIAgent(object):
     # 随机选择抽取下一个动作的概率为0.2
@@ -23,6 +21,7 @@ class MIAgent(object):
     # 学习率
     learning_rate = 0.001
 
+
     def __init__(self, hospital_coefficient, init_coefficient,delta = 1, size=1000):
         # 点数范围大小
         self.size = size
@@ -30,8 +29,10 @@ class MIAgent(object):
         self.hospital_coefficient = hospital_coefficient
         # 当前周期点数值
         self.init_coefficient = init_coefficient
-        self.observation_space_values = (init_coefficient.size,self.size)
-        self.action_space_values = (init_coefficient.size,3)
+        # 状态空间
+        self.observation_space_values = (init_coefficient.size,)
+        # 动作个数
+        self.action_space_values = 3**init_coefficient.size
 
     def reset(self):
         '''
@@ -43,14 +44,16 @@ class MIAgent(object):
         observation = tuple(self.player.init_coefficient.tolist())
         self.episode_step = 0
         return observation
-    def setp(self,action):
+    def step(self,action):
         self.episode_step += 1
         self.player.action(action)
         new_observation = self.player.coefficient
+        # print(f"action:{action}")
+        # print(f'{self.episode_step}:{self.player.coefficient}')
         reward = self.cal_reward()
         done = False
         # 超出范围或者调整了1000次停止
-        if np.sum(self.player.coefficient>self.size or self.player.coefficient<= self.size) >1 or self.episode_step>=1000:
+        if (np.sum(self.player.coefficient>self.size)+np.sum(self.player.coefficient<0)) >1 or self.episode_step>=1000:
             done = True
         # TODO
         info = {}
@@ -58,12 +61,26 @@ class MIAgent(object):
     # def get_qtable(self,qtable_name=None):
     #     qtable = pd.DataFrame()
 
+    def render(self):
+        '''
+        可视化
+        '''
+        # TODO
+        pass
+
 
 
     def cal_hospital_factor(self):
+        '''
+        计算系数
+        '''
+        # TODO
         pass
 
     def cal_reward(self):
+        '''
+        计算奖励值
+        '''
         return np.random.randint(100)
 
 
@@ -71,40 +88,45 @@ class Cube(object):
     def __init__(self,init_coefficient):
         # 初始值
         self.init_coefficient = init_coefficient
+        # print(f'初始值： {self.init_coefficient} -------')
         # 决策中的值
         self.coefficient = init_coefficient
     def __str__(self):
         return f'{self.init_coefficient}'
     def action(self,choice):
-        self.coefficient += choice
+        choice_item = choice.item()
+        choice_transform = Cube.decimal_conversion(choice_item,3)
+        while len(choice_transform)<self.coefficient.size:
+            choice_transform.append(0)
+        # print(f'动作：  {choice}   动作编码：  {choice_transform}  ------')
+        for i in range(len(choice_transform)):
+            if choice_transform[i]==0:
+                self.coefficient[i] += -1
+            elif choice_transform[i] == 2:
+                self.coefficient[i] += 1
+        # print(f'变化值： {self.coefficient} ------')
 
 
-def build_model(status, nb_actions):
-    model = Sequential()
-    model.add(Flatten(input_shape=(1,) + status))
-    model.add(Dense(32, activation='relu'))
-    model.add(Dense(32, activation='relu'))
-    model.add(Dense(nb_actions, activation='linear'))
-    return model
+    @staticmethod
+    def decimal_conversion(n, x):
+        '''
+        进制转换
+        '''
+        # n为待转换的十进制数，x为机制
+        b = []
+        while True:
+            s = n // x  # 商
+            y = n % x  # 余数
+            b = b + [y]
+            if s == 0:
+                break
+            n = s
+        b.reverse()
+        return b
 
 
-def build_agent(model, nb_actions):
-    # window_length:mini_batch
-    memory = SequentialMemory(limit=50000, window_length=1)
-    policy = BoltzmannQPolicy()
-    # nb_steps_warmup:热身步数
-    # target_model_update 解决bootstrap问题
-    dqn = DQNAgent(model=model, nb_actions=nb_actions, memory=memory, nb_steps_warmup=1000,
-                   target_model_update=1e-2, policy=policy)
-    dqn.compile(Adam(learning_rate=1e-3), metrics=['mae'])
-    return dqn
 
-if __name__ == "__main__":
-    coefficient = np.random.randint(100,[100,1])
-    hospital_coefficient = np.random.rand(1,3)
-    env = MIAgent(hospital_coefficient,coefficient,size=10)
-    model = build_model(env.observation_space_values,env.ACTION_SPACE_VALUES)
-    dqn = build_agent(model,env.ACTION_SPACE_VALUES)
+
 
 
 
