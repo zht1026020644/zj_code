@@ -81,6 +81,9 @@ class MIAgent(object):
         '''
         计算奖励值
         '''
+        # 读取医院患者数据 分组后计算奖励函数
+
+
         return np.random.randint(100)
 
 
